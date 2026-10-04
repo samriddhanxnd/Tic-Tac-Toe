@@ -1,4 +1,4 @@
-# Tic Tac Toe — Series
+# Tic Tac Toe
 
 A simple **Tic Tac Toe series game** built using **HTML, CSS, and JavaScript**.
 
