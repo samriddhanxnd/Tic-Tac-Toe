@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tic Tac Toe</title>
+    <style>
+        :root {
+            --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #311042 100%);
+            --card-bg: rgba(255, 255, 255, 0.05);
+            --card-border: rgba(255, 255, 255, 0.1);
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --accent-x: #38bdf8;
+            --accent-o: #f43f5e;
+            --accent-gold: #fbbf24;
+            --glow-x: rgba(56, 189, 248, 0.4);
+            --glow-o: rgba(244, 63, 94, 0.4);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+        }
+
+        body {
+            background: var(--bg-gradient);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow-x: hidden;
+            padding: 20px;
+        }
+
+        .app-container {
+            width: 100%;
+            max-width: 500px;
+            background: var(--card-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--card-border);
+            border-radius: 24px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            padding: 30px;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 2rem;
+            margin-bottom: 25px;
+            background: linear-gradient(to right, var(--accent-x), var(--accent-o));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+        }
+
+        /* Screens */
+        .screen {
+            display: none;
+            flex-direction: column;
+            gap: 20px;
+            animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        .screen.active {
+            display: flex;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Setup Form Styles */
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        label {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            font-weight: 600;
+        }
+
+        input[type="text"], input[type="number"] {
+            width: 100%;
+            padding: 14px 18px;
+            background: rgba(0, 0, 0, 0.25);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            color: var(--text-primary);
+            font-size: 1rem;
+            outline: none;
+            transition: all 0.2s;
+        }
+
+        input:focus {
+            border-color: var(--accent-x);
+            box-shadow: 0 0 0 3px var(--glow-x);
+        }
+
+        .match-options {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+        }
+
+        .match-btn {
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            color: var(--text-primary);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+        }
+
+        .match-btn.selected {
+            background: var(--accent-x);
+            color: #0f172a;
+            border-color: var(--accent-x);
+            box-shadow: 0 0 15px var(--glow-x);
+        }
+
+        .match-btn:hover:not(.selected) {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .custom-match-container {
+            display: none;
+            margin-top: -10px;
+        }
+
+        .custom-match-container.show {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .btn-primary {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, var(--accent-x), #2563eb);
+            color: white;
+            border: none;
+            border-radius: 14px;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+            margin-top: 10px;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4);
+        }
+
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+
+        /* Game Header & Scoreboard */
+        .game-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.2);
+            padding: 15px 20px;
+            border-radius: 16px;
+            border: 1px solid var(--card-border);
+        }
+
+        .player-score-card {
+            text-align: center;
+            flex: 1;
+        }
+
+        .player-score-card.active-turn {
+            transform: scale(1.05);
+            transition: transform 0.2s;
+        }
+
+        .player-score-card .p-name {
+            font-weight: 700;
+            font-size: 1rem;
+            margin-bottom: 4px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 130px;
+            display: inline-block;
+        }
+
+        .player-score-card.x-card .p-name { color: var(--accent-x); }
+        .player-score-card.o-card .p-name { color: var(--accent-o); }
+
+        .player-score-card .p-score {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: var(--text-primary);
+        }
+
+        .match-info-badge {
+            background: rgba(255, 255, 255, 0.08);
+            padding: 8px 14px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            border: 1px solid var(--card-border);
+            text-align: center;
+        }
+
+        /* Turn Indicator Banner */
+        .turn-banner {
+            text-align: center;
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            padding: 6px;
+        }
+
+        .turn-banner span {
+            font-weight: 700;
+        }
+        .turn-banner span.x-turn { color: var(--accent-x); }
+        .turn-banner span.o-turn { color: var(--accent-o); }
+
+        /* Tic Tac Toe Grid */
+        .board {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            aspect-ratio: 1;
+            width: 100%;
+        }
+
+        .cell {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 3.2rem;
+            font-weight: 800;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            user-select: none;
+        }
+
+        .cell:hover:not(.filled) {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 255, 255, 0.2);
+            transform: scale(1.03);
+        }
+
+        .cell.x {
+            color: var(--accent-x);
+            text-shadow: 0 0 20px var(--glow-x);
+            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .cell.o {
+            color: var(--accent-o);
+            text-shadow: 0 0 20px var(--glow-o);
+            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes popIn {
+            0% { transform: scale(0); opacity: 0; }
+            80% { transform: scale(1.1); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .cell.winning-cell {
+            background: rgba(251, 191, 36, 0.15);
+            border-color: var(--accent-gold);
+            animation: pulseWin 0.8s infinite alternate;
+        }
+
+        @keyframes pulseWin {
+            from { box-shadow: 0 0 10px rgba(251, 191, 36, 0.2); }
+            to { box-shadow: 0 0 25px rgba(251, 191, 36, 0.6); }
+        }
+
+        /* Modal / Overlay for Match End / Series End */
+        .modal-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border-radius: 24px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+            z-index: 10;
+        }
+
+        .modal-overlay.show {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal-content {
+            background: rgba(30, 27, 75, 0.95);
+            border: 1px solid var(--card-border);
+            padding: 30px;
+            border-radius: 20px;
+            width: 88%;
+            max-width: 400px;
+            text-align: center;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+            transform: scale(0.9);
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .modal-overlay.show .modal-content {
+            transform: scale(1);
+        }
+
+        .modal-title {
+            font-size: 1.5rem;
+            font-weight: 800;
+            margin-bottom: 15px;
+        }
+
+        .modal-message {
+            margin-bottom: 25px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .modal-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .modal-btn {
+            padding: 14px;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 1rem;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+        }
+
+        .btn-play-again {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+        }
+        .btn-play-again:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(16, 185, 129, 0.4);
+        }
+
+        .btn-new-series {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+            border: 1px solid var(--card-border);
+        }
+        .btn-new-series:hover {
+            background: rgba(255, 255, 255, 0.18);
+        }
+
+        .error-msg {
+            color: var(--accent-o);
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-top: -4px;
+            display: none;
+        }
+
+        /* Confetti particles */
+        .confetti {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background: var(--accent-gold);
+            animation: fall 1.5s linear infinite;
+            top: -10px;
+            z-index: 100;
+            border-radius: 50%;
+        }
+
+        @keyframes fall {
+            0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+            100% { transform: translateY(450px) rotate(720deg); opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="app-container" id="appContainer">
+        <h1>Tic Tac Toe</h1>
+
+        <!-- SCREEN 1: SETUP -->
+        <div id="setupScreen" class="screen active">
+            <div class="form-group">
+                <label for="p1NameInput">Player 1 Name</label>
+                <input type="text" id="p1NameInput" placeholder="Enter Player 1 name" autocomplete="off">
+                <div id="p1Error" class="error-msg">Name cannot be empty!</div>
+            </div>
+
+            <div class="form-group">
+                <label for="p2NameInput">Player 2 Name</label>
+                <input type="text" id="p2NameInput" placeholder="Enter Player 2 name" autocomplete="off">
+                <div id="p2Error" class="error-msg">Name cannot be empty!</div>
+            </div>
+
+            <div class="form-group">
+                <label>Select Matches in Series</label>
+                <div class="match-options" id="matchOptions">
+                    <button type="button" class="match-btn" data-matches="1">1</button>
+                    <button type="button" class="match-btn selected" data-matches="3">3</button>
+                    <button type="button" class="match-btn" data-matches="5">5</button>
+                    <button type="button" class="match-btn" data-matches="custom">Custom</button>
+                </div>
+            </div>
+
+            <div class="form-group custom-match-container" id="customMatchContainer">
+                <label for="customMatchesInput">Custom Number of Matches</label>
+                <input type="number" id="customMatchesInput" min="1" max="99" value="7">
+                <div id="customError" class="error-msg">Please enter a valid number (at least 1).</div>
+            </div>
+
+            <button type="button" class="btn-primary" id="startSeriesBtn">Start Series</button>
+        </div>
+
+        <!-- SCREEN 2: GAME BOARD -->
+        <div id="gameScreen" class="screen">
+            <div class="game-header">
+                <div class="player-score-card x-card" id="p1Card">
+                    <div class="p-name" id="p1Display">Player 1</div>
+                    <div class="p-score" id="p1Score">0</div>
+                </div>
+                <div class="match-info-badge" id="matchInfoBadge">Match 1 of 3</div>
+                <div class="player-score-card o-card" id="p2Card">
+                    <div class="p-name" id="p2Display">Player 2</div>
+                    <div class="p-score" id="p2Score">0</div>
+                </div>
+            </div>
+
+            <div class="turn-banner" id="turnBanner">
+                Turn: <span id="currentTurnName" class="x-turn">Player 1 (X)</span>
+            </div>
+
+            <div class="board" id="board">
+                <div class="cell" data-index="0"></div>
+                <div class="cell" data-index="1"></div>
+                <div class="cell" data-index="2"></div>
+                <div class="cell" data-index="3"></div>
+                <div class="cell" data-index="4"></div>
+                <div class="cell" data-index="5"></div>
+                <div class="cell" data-index="6"></div>
+                <div class="cell" data-index="7"></div>
+                <div class="cell" data-index="8"></div>
+            </div>
+        </div>
+
+        <!-- MODAL FOR MATCH / SERIES RESULT -->
+        <div class="modal-overlay" id="resultModal">
+            <div class="modal-content">
+                <div class="modal-title" id="modalTitle">Match Over</div>
+                <div class="modal-message" id="modalMessage">
+                    <!-- Nicely formatted multi-line content goes here -->
+                </div>
+                <div class="modal-actions" id="modalActions">
+                    <!-- Dynamically populated buttons -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // State Management
+        let state = {
+            p1Name: '',
+            p2Name: '',
+            totalMatches: 3,
+            currentMatchNumber: 1,
+            p1Score: 0,
+            p2Score: 0,
+            board: Array(9).fill(''),
+            currentPlayer: 'X', // 'X' or 'O'
+            p1Symbol: 'X',
+            p2Symbol: 'O',
+            isGameActive: true,
+            selectedOption: '3'
+        };
+
+        // DOM Elements
+        const setupScreen = document.getElementById('setupScreen');
+        const gameScreen = document.getElementById('gameScreen');
+        const p1NameInput = document.getElementById('p1NameInput');
+        const p2NameInput = document.getElementById('p2NameInput');
+        const p1Error = document.getElementById('p1Error');
+        const p2Error = document.getElementById('p2Error');
+        const customError = document.getElementById('customError');
+        const matchOptions = document.getElementById('matchOptions');
+        const customMatchContainer = document.getElementById('customMatchContainer');
+        const customMatchesInput = document.getElementById('customMatchesInput');
+        const startSeriesBtn = document.getElementById('startSeriesBtn');
+
+        const p1Display = document.getElementById('p1Display');
+        const p2Display = document.getElementById('p2Display');
+        const p1ScoreElem = document.getElementById('p1Score');
+        const p2ScoreElem = document.getElementById('p2Score');
+        const p1Card = document.getElementById('p1Card');
+        const p2Card = document.getElementById('p2Card');
+        const matchInfoBadge = document.getElementById('matchInfoBadge');
+        const currentTurnName = document.getElementById('currentTurnName');
+        const boardElem = document.getElementById('board');
+        const cells = document.querySelectorAll('.cell');
+
+        const resultModal = document.getElementById('resultModal');
+        const modalTitle = document.getElementById('modalTitle');
+        const modalMessage = document.getElementById('modalMessage');
+        const modalActions = document.getElementById('modalActions');
+        const appContainer = document.getElementById('appContainer');
+
+        const WINNING_COMBOS = [
+            [0, 1, 2], [3, 4, 5], [6, 7, 8], // Rows
+            [0, 3, 6], [1, 4, 7], [2, 5, 8], // Columns
+            [0, 4, 8], [2, 4, 6]              // Diagonals
+        ];
+
+        // Match option selector listeners
+        matchOptions.querySelectorAll('.match-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                matchOptions.querySelectorAll('.match-btn').forEach(b => b.classList.remove('selected'));
+                btn.classList.add('selected');
+                state.selectedOption = btn.getAttribute('data-matches');
+
+                if (state.selectedOption === 'custom') {
+                    customMatchContainer.classList.add('show');
+                } else {
+                    customMatchContainer.classList.remove('show');
+                    state.totalMatches = parseInt(state.selectedOption);
+                }
+            });
+        });
+
+        // Start Series Button Click
+        startSeriesBtn.addEventListener('click', () => {
+            let isValid = true;
+            const name1 = p1NameInput.value.trim();
+            const name2 = p2NameInput.value.trim();
+
+            if (!name1) {
+                p1Error.style.display = 'block';
+                isValid = false;
+            } else {
+                p1Error.style.display = 'none';
+            }
+
+            if (!name2) {
+                p2Error.style.display = 'block';
+                isValid = false;
+            } else {
+                p2Error.style.display = 'none';
+            }
+
+            if (state.selectedOption === 'custom') {
+                const customVal = parseInt(customMatchesInput.value);
+                if (isNaN(customVal) || customVal < 1) {
+                    customError.style.display = 'block';
+                    isValid = false;
+                    return;
+                } else {
+                    customError.style.display = 'none';
+                    state.totalMatches = customVal;
+                }
+            }
+
+            if (!isValid) return;
+
+            // Initialize Series
+            state.p1Name = name1;
+            state.p2Name = name2;
+            state.currentMatchNumber = 1;
+            state.p1Score = 0;
+            state.p2Score = 0;
+
+            setupScreen.classList.remove('active');
+            gameScreen.classList.add('active');
+
+            startNewMatch();
+        });
+
+        function startNewMatch() {
+            state.board = Array(9).fill('');
+            state.isGameActive = true;
+            state.currentPlayer = 'X'; // X always starts the match turn
+
+            // Alternate signs between players for each match:
+            // Odd matches (1, 3, 5...): Player 1 = X, Player 2 = O
+            // Even matches (2, 4, 6...): Player 1 = O, Player 2 = X
+            if (state.currentMatchNumber % 2 !== 0) {
+                state.p1Symbol = 'X';
+                state.p2Symbol = 'O';
+                p1Card.className = 'player-score-card x-card';
+                p2Card.className = 'player-score-card o-card';
+            } else {
+                state.p1Symbol = 'O';
+                state.p2Symbol = 'X';
+                p1Card.className = 'player-score-card o-card';
+                p2Card.className = 'player-score-card x-card';
+            }
+
+            p1Display.textContent = `${state.p1Name} (${state.p1Symbol})`;
+            p2Display.textContent = `${state.p2Name} (${state.p2Symbol})`;
+
+            // Reset UI board
+            cells.forEach(cell => {
+                cell.textContent = '';
+                cell.className = 'cell';
+            });
+
+            matchInfoBadge.textContent = state.totalMatches === 1 ? `Single Match` : `Match ${state.currentMatchNumber} of ${state.totalMatches}`;
+            updateScoreboardUI();
+        }
+
+        function updateScoreboardUI() {
+            p1ScoreElem.textContent = state.p1Score;
+            p2ScoreElem.textContent = state.p2Score;
+
+            // Determine active turn name & color based on symbol ownership
+            const currentXPlayerName = state.p1Symbol === 'X' ? state.p1Name : state.p2Name;
+            const currentOPlayerName = state.p1Symbol === 'X' ? state.p2Name : state.p1Name;
+            const activeName = state.currentPlayer === 'X' ? currentXPlayerName : currentOPlayerName;
+
+            currentTurnName.textContent = `${activeName} (${state.currentPlayer})`;
+            currentTurnName.className = state.currentPlayer === 'X' ? 'x-turn' : 'o-turn';
+
+            if (state.currentPlayer === 'X') {
+                if (state.p1Symbol === 'X') {
+                    p1Card.classList.add('active-turn');
+                    p2Card.classList.remove('active-turn');
+                } else {
+                    p2Card.classList.add('active-turn');
+                    p1Card.classList.remove('active-turn');
+                }
+            } else {
+                if (state.p1Symbol === 'O') {
+                    p1Card.classList.add('active-turn');
+                    p2Card.classList.remove('active-turn');
+                } else {
+                    p2Card.classList.add('active-turn');
+                    p1Card.classList.remove('active-turn');
+                }
+            }
+        }
+
+        // Cell Click Handler
+        cells.forEach(cell => {
+            cell.addEventListener('click', () => {
+                const index = parseInt(cell.getAttribute('data-index'));
+
+                if (!state.isGameActive || state.board[index] !== '') return;
+
+                state.board[index] = state.currentPlayer;
+                cell.textContent = state.currentPlayer;
+                cell.classList.add('filled', state.currentPlayer.toLowerCase());
+
+                checkGameOutcome();
+            });
+        });
+
+        function checkGameOutcome() {
+            let roundWon = false;
+            let winningCombo = null;
+
+            for (let combo of WINNING_COMBOS) {
+                const [a, b, c] = combo;
+                if (state.board[a] && state.board[a] === state.board[b] && state.board[a] === state.board[c]) {
+                    roundWon = true;
+                    winningCombo = combo;
+                    break;
+                }
+            }
+
+            if (roundWon) {
+                state.isGameActive = false;
+                const winnerSymbol = state.currentPlayer;
+                const winnerName = winnerSymbol === state.p1Symbol ? state.p1Name : state.p2Name;
+
+                if (winnerSymbol === state.p1Symbol) state.p1Score++;
+                else state.p2Score++;
+
+                updateScoreboardUI();
+
+                // Highlight winning cells
+                winningCombo.forEach(idx => {
+                    cells[idx].classList.add('winning-cell');
+                });
+
+                setTimeout(() => handleMatchEnd(winnerName, false), 600);
+                return;
+            }
+
+            // Check for Draw
+            if (!state.board.includes('')) {
+                state.isGameActive = false;
+                updateScoreboardUI();
+                setTimeout(() => handleMatchEnd(null, true), 600);
+                return;
+            }
+
+            // Switch Player
+            state.currentPlayer = state.currentPlayer === 'X' ? 'O' : 'X';
+            updateScoreboardUI();
+        }
+
+        function handleMatchEnd(matchWinnerName, isDraw) {
+            const isFinalMatch = state.currentMatchNumber >= state.totalMatches;
+
+            if (isFinalMatch) {
+                // Determine Series Winner
+                modalTitle.textContent = "Series Complete!";
+                let messageHTML = "";
+                if (state.p1Score > state.p2Score) {
+                    messageHTML = `
+                        <div style="font-size: 1.15rem; font-weight: 700; color: var(--accent-gold); margin-bottom: 6px;">${state.p1Name} has won the series!</div>
+                        <div style="font-size: 1rem; color: var(--text-secondary);">Final Score: ${state.p1Name} ${state.p1Score} - ${state.p2Score} ${state.p2Name}</div>
+                    `;
+                } else if (state.p2Score > state.p1Score) {
+                    messageHTML = `
+                        <div style="font-size: 1.15rem; font-weight: 700; color: var(--accent-gold); margin-bottom: 6px;">${state.p2Name} has won the series!</div>
+                        <div style="font-size: 1rem; color: var(--text-secondary);">Final Score: ${state.p1Name} ${state.p1Score} - ${state.p2Score} ${state.p2Name}</div>
+                    `;
+                } else {
+                    messageHTML = `
+                        <div style="font-size: 1.15rem; font-weight: 700; color: var(--accent-gold); margin-bottom: 6px;">The series ended in a tie!</div>
+                        <div style="font-size: 1rem; color: var(--text-secondary);">Final Score: ${state.p1Name} ${state.p1Score} - ${state.p2Score} ${state.p2Name}</div>
+                    `;
+                }
+                modalMessage.innerHTML = messageHTML;
+
+                // After final match, ONLY show New Series option
+                modalActions.innerHTML = `
+                    <button class="modal-btn btn-play-again btn-new-series" onclick="resetToNewSeries()">New Series</button>
+                `;
+                triggerConfetti();
+            } else {
+                // Regular match end before final match
+                modalTitle.textContent = state.totalMatches === 1 ? "Match Over" : `Match ${state.currentMatchNumber} Over`;
+                let messageHTML = "";
+                if (isDraw) {
+                    messageHTML = `
+                        <div style="font-size: 1.1rem; font-weight: 700; color: var(--text-primary); margin-bottom: 6px;">Match ${state.currentMatchNumber} resulted in a Draw!</div>
+                        <div style="font-size: 1rem; color: var(--text-secondary);">Score: ${state.p1Name} ${state.p1Score} - ${state.p2Score} ${state.p2Name}</div>
+                    `;
+                } else {
+                    if (state.totalMatches === 1) {
+                        messageHTML = `
+                            <div style="font-size: 1.1rem; font-weight: 700; color: var(--accent-gold); margin-bottom: 6px;">${matchWinnerName} has won the match!</div>
+                        `;
+                    } else {
+                        messageHTML = `
+                            <div style="font-size: 1.1rem; font-weight: 700; color: var(--accent-gold); margin-bottom: 6px;">${matchWinnerName} won Match ${state.currentMatchNumber}!</div>
+                            <div style="font-size: 1rem; color: var(--text-secondary);">Current Score: ${state.p1Name} ${state.p1Score} - ${state.p2Score} ${state.p2Name}</div>
+                        `;
+                    }
+                }
+                modalMessage.innerHTML = messageHTML;
+
+                // Two options: Play Again and New Series
+                modalActions.innerHTML = `
+                    <button class="modal-btn btn-play-again" onclick="proceedToNextMatch()">Play Again</button>
+                    <button class="modal-btn btn-new-series" onclick="resetToNewSeries()">New Series</button>
+                `;
+            }
+
+            resultModal.classList.add('show');
+        }
+
+        function proceedToNextMatch() {
+            resultModal.classList.remove('show');
+            state.currentMatchNumber++;
+            startNewMatch();
+        }
+
+        function resetToNewSeries() {
+            resultModal.classList.remove('show');
+            gameScreen.classList.remove('active');
+            setupScreen.classList.add('active');
+            p1NameInput.value = '';
+            p2NameInput.value = '';
+        }
+
+        function triggerConfetti() {
+            for (let i = 0; i < 40; i++) {
+                const confetti = document.createElement('div');
+                confetti.className = 'confetti';
+                confetti.style.left = Math.random() * 100 + '%';
+                confetti.style.backgroundColor = ['#38bdf8', '#f43f5e', '#fbbf24', '#10b981', '#a855f7'][Math.floor(Math.random() * 5)];
+                confetti.style.animationDuration = (Math.random() * 1 + 1) + 's';
+                confetti.style.animationDelay = (Math.random() * 0.5) + 's';
+                appContainer.appendChild(confetti);
+
+                setTimeout(() => {
+                    confetti.remove();
+                }, 2000);
+            }
+        }
+    </script>
+</body>
+</html>
